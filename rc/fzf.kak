@@ -90,6 +90,18 @@ bool fzf_use_main_selection true
 declare-option -docstring "Default options for fzf." \
 str fzf_default_opts ''
 
+declare-option -docstring "Use tmux popup window, not a pane.
+Default value: false" \
+bool fzf_tmux_popup false
+
+declare-option -docstring "width of tmux popup window
+Default value: 	60%%" \
+str fzf_tmux_popup_width '60%'
+
+declare-option -docstring "height of tmux popup window
+Default value: 	60%%" \
+str fzf_tmux_popup_height '60%'
+
 try %{ declare-user-mode fzf }
 
 define-command -hidden -docstring "wrapper command to create new vertical split" \
@@ -211,8 +223,12 @@ fzf -params .. %{ evaluate-commands %sh{
         [ -z "${tmux_height}" ] && tmux_height=${kak_opt_fzf_tmux_height:-}
         # if height contains `%' then `-p' will be used
         [ -n "${tmux_height%%*%}" ] && measure="-l" || measure="-p"
-        # `terminal' doesn't support any kind of width and height parameters, so tmux panes are created by tmux itself
-        cmd="nop %sh{ command tmux split-window -t '${kak_client_env_TMUX_PANE:-}' ${measure} ${tmux_height%%%*} env ${fzfcmd} < /dev/null > /dev/null 2>&1 }"
+        if [ "${kak_opt_fzf_tmux_popup:-}" = "true" ]; then
+          cmd="nop %sh{ command tmux display-popup -t '${kak_client_env_TMUX_PANE:-}' -w ${kak_opt_fzf_tmux_popup_width} -h ${kak_opt_fzf_tmux_popup_height} -E env ${fzfcmd} < /dev/null > /dev/null 2>&1 }"
+        else
+          # `terminal' doesn't support any kind of width and height parameters, so tmux panes are created by tmux itself
+          cmd="nop %sh{ command tmux split-window -t '${kak_client_env_TMUX_PANE:-}' ${measure} ${tmux_height%%%*} env ${fzfcmd} < /dev/null > /dev/null 2>&1 }"
+        fi
     else
         cmd="${kak_opt_fzf_terminal_command%% *} %{${fzfcmd}}"
     fi
